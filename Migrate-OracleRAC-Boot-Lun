@@ -1,0 +1,125 @@
+# Migrating Oracle RAC Boot LUN
+#
+# Place server in Block-o-matic, using IE
+# http://emon/tngreports/BlockOMatic.asp
+
+# Run script to verify the partitions are correct
+# If not successful contact Joe Krakora in IE&D
+sudo /usr/local/share/scripts/test/chkpart
+
+# Stop the Oracle service and cause a failover and make sure the service doesn't come 
+# back up after multiple reboots if necessary.
+sudo /orashare/bin/sysadmora stop boot_disabled 
+
+# The status command below should come back with no information
+sudo /orashare/bin/sysadmora status
+
+# Verify that VPLEX and XIO paths can be managed by PowerPath
+# VPLEX         status = managed
+# XtremIO       status = managed
+sudo powermt display options
+
+# If they are not managed run the following command to enable
+sudo powermt manage class=vplex
+sudo powermt manage class=xtremio
+
+# Take system out of powerpath control 
+cd /etc/opt/emcpower
+sudo ./emcpbfs_linux upgrade
+
+# Need to remove the PowerPath kernel from the grub menu.
+# Check to see what the default is set to and count, starting at 0, down the list and 
+# find the current kernel. This should have (PowerPath) at the end.  Remove the 
+# Powerpath disk kernel line and change default to the same kernel without PP
+sudo vi /boot/grub/menu.lst
+
+# Now download a script that will run the powerpath configure during boot to setup 
+# powerpath control of the kernel. Make the script executable.
+cd /usr/scripts/runonce (does not work)
+sudo wget http://kickstartprod/install/runonce_powerpath_config -O /usr/scripts/runonce/runonce_powerpath_config
+sudo chmod +x /usr/scripts/runonce/runonce_powerpath_config
+
+# Shutdown server so SAN team can swing the boot lun to VPLEX
+sudo shutdown -r now
+
+# note: issues with shutdown like umount fails and hangs the server, go to UCB and do a shutdown ungracefully
+
+# Advise SAN team the server is ready
+# After the SAN work is completed the server will sometimes boot after a UCS change.
+# Power off the server and do a clean boot because many times it will not see the new 
+# VPLEX paths. The server will reboot again on its own during the boot process because 
+# it’s running the “emcpbfs_linux config” script to allow powerpath to control the kernel.
+# During the 1st boot and aas soon as you can connect back onto the server edit the fstab file but only 
+# open and close without any changes. At this point the server will reboot.
+sudo vi /etc/fstab
+
+# Once server is up and running after second reboot, make sure rootvg is set to an 
+# emcpower device and grub is setup for default for the new powerpath controlled kernel.
+sudo pvs
+
+# Good output…Bad output, see troubleshooting section
+sudo powermt display dev=[rootvg emcpower device]
+
+# Restart Oracle High Availability Services 
+sudo initctl start oracle-ohasd  
+
+# Restart Oracle and enable boot
+sudo /orashare/bin/sysadmora start boot_enabled
+
+# note: it takes a while for the CRS daemon to startup so it will error, just keep checking processes.
+
+# Check to make sure all the Oracle daemons are running. There should be 9 total and 
+# will take a couple of minutes
+ps -ef | grep d.bin
+
+# Check the status of the instances
+sudo /orashare/bin/sysadmora status
+
+# Troubleshooting
+
+# Server errors out at fsck during boot and now in kernel panic
+# Using the same method as going into single user mode, place a “fastboot” at the end of the kernel
+#argument to bypass any fsck that happens during boot
+
+# Server fails when running the emcpbfs_linux config during boot
+# Allow it to boot into normal kernel and run the following to manually attempt to configure for powerpath
+cd /etc/opt/emcpower
+sudo ./emcpbfs_linux config
+
+# It will either complete successfully or it will error and will have to troubleshoot
+#Reboot the server
+sudo shutdown -r now
+
+# Server fails on fstab during the emcpbfs_linux config script
+# After the server boots into the OS, open fstab in vi and then close without saving
+sudo vi /etc/fstab
+cd /etc/opt/emcpower
+sudo ./emcpbfs_linux config
+sudo shutdown -r now
+
+# oravg is not found during boot and fastboot will not pass
+# Go into single user mode and mark disk as 0 0 in fstab
+# Make sure to remember what it was before
+# Boot server normally
+# Change fstab back to what the disk should be
+# Make sure the disk is active in LVM
+sudo vgchange -a y oravg
+
+# Mount all the disks
+sudo mount -a
+
+# Check df -h to make sure oravg showed up
+df -h
+
+# Oracle software fails to start
+# Check to see if ASM can see the disks
+sudo oracleasm listdisks
+
+# If nothing comes back then run a scandisk
+sudo oracleasm scandisks
+
+# Restart clusterware if you had to scandisk
+sudo initctl restart oracle-ohasd  
+
+# Check to see if all 9 daemons started for Oracle
+ps -ef | grep d.bin
