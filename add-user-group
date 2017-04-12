@@ -1,0 +1,26 @@
+# Add Group
+/usr/sbin/groupadd -g 299 oinstall
+/usr/sbin/groupadd -g 500 mqm
+
+# Add User
+useradd -c "Oracle user" -d /u01/home/oracle -g oinstall -u 201 oracle
+useradd -c "MQ user" -d /var/mqm -g mqm -u 498 mqm
+
+# Set User password to unexpire:
+chage -M -1 -m0 cdimdm 
+chage -l cdimdm
+
+# cdimdm:x:442:444:MDM Manager:/opt/IBM/home/cdimdm:/bin/bash
+# mdm:x:444:
+#
+# mqm:x:498:500::/var/mqm:/bin/bash
+# mqm:x:500:
+#
+# oracle:x:201:299::/u01/home/oracle:/bin/bash
+# oinstall:x:299:
+#
+# httpadm:x:541:
+# groupadd -g 541 httpadm
+#
+# httpadm:x:541:541:HTTP Admin:/opt/IBM:/bin/bash
+# adduser -u 541 -g 541 -d /opt/IBM httpadm
