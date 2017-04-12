@@ -1,0 +1,19 @@
+# Rack all new servers
+
+# Install all Linux O/S
+
+# Burn in the disks (3 day process)
+# Make sure you actually look at the /dev/sd? And edit the below command before running!!!  Don’t assume it will be /dev/sdb
+sudo badblocks -w -p 3 -t 0x0f -s -o /tmp/badblocksb /dev/sdb
+
+# After badblocks destroys partition run this and reboot.
+echo 1 > /sys/block/sdb/device/delete
+
+# Run the post config script
+http://nfsbigdatarepos/hdp/build-data-node/Hadoop-Node-Set.sh
+
+# Migrate data for a subset of servers (only those NEW servers in permanent location)
+# Decommission and REMOVE from racks a subset of servers
+# Move a subset of new servers to permanent location
+# Repeat steps 4, 5 and 6 until all 20 production data servers are in permanent location.
+
