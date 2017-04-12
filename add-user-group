@@ -1,3 +1,4 @@
+# Add user and group for the various vendor users
 # Add Group
 /usr/sbin/groupadd -g 299 oinstall
 /usr/sbin/groupadd -g 500 mqm
