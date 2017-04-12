@@ -1,0 +1,23 @@
+echo "- - -" > /sys/class/scsi_host/host0/scan 
+echo "- - -" > /sys/class/scsi_host/host1/scan 
+echo "- - -" > /sys/class/scsi_host/host2/scan 
+echo "- - -" > /sys/class/scsi_host/host3/scan
+
+ls /dev/sd*
+#fdisk /dev/sdb
+parted -s /dev/sdb mklabel msdos
+parted -s /dev/sdb mkpart primary 1 100% 
+ls /dev/sdb*
+pvcreate /dev/sdb1
+lvmdiskscan | grep sdb1
+vgcreate intelvg /dev/sdb1
+vgscan
+lvcreate -L 299G -n esglv intelvg
+mkfs.ext4 /dev/intelvg/esglv  
+mkdir /opt/esg
+mount -t ext4 /dev/intelvg/esglv /opt/esg 
+vi /etc/fstab   /dev/mapper/intelvg-esglv          /opt/esg/            ext4       deafults               0 0
+umount /opt/esg
+df -h
+mount -a
+df -h
