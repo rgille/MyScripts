@@ -1,0 +1,53 @@
+# Migrating disks in a VG
+# Place server in Block-o-matic, using IE
+# http://emon/tngreports/BlockOMatic.asp
+
+# Adding a new virtual disk
+# Inside the OS, run the following commands to scan the disk in
+cd /usr/local/share/scripts
+scanhba -a
+
+# Format the new disk
+parted -s /dev/emcpower[$] mklabel msdos mkpart primary 1 100%
+
+# Create the physical volume with the following command
+pvcreate /dev/emcpower[$]1
+
+# Run “pvs” to make sure the new disk is showing
+sudo pvs
+
+# Run the following command to add the new disk to the VG
+vgextend [vgname] [/dev/emcpower[$]1]
+
+# Run “pvs” to find the SD device you wish to migrate from.
+sudo pvs
+
+# Run the following command to migrate the data
+pvmove [source] [destination]
+
+# EXAMPLE
+pvmove /dev/emcpower[$]1 /dev/emcpower[$]1
+
+# Run “pvs” again and verify that the free space on the disks have switched appropriately
+sudo pvs
+
+# IMPORTANT!! Get the WWN IDs for the disks you are removing, before you do any of the remove steps!
+# Enter the WWID[s] for the disk[s] you are removing to /tmp/UUID.lst
+# If UUID.lst isn’t found, then create that file in /tmp
+
+# Run the following command to remove the disk from the VG
+vgreduce [vgname] [/dev/emcpower[$]1]
+
+# Run the following command to remove the physical volume
+pvremove /dev/emcpower[$]1
+
+# Run the following command to remove the partition from the disk you are retiring
+parted -s /dev/emcpower[$] rm 1
+
+# Delete the disk from powerpath
+powermt remove dev=emcpower[$]
+
+# Run the following command to remove the sd device from the system,make sure you have created and edited /tmp/UUID.lst
+cd /usr/local/share/scripts
+rmdisk
+
