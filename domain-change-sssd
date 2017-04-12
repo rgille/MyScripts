@@ -1,0 +1,14 @@
+# Copy sssd.conf to sssd.PROG1 
+cp /etc/sssd/sssd.conf /etc/sssd/sssd.PROG1
+
+# Get the correct sssd file
+wget http://kickstartprod/AD/sssd/sssd.PROGHSZQ -O /etc/sssd/sssd.conf 
+
+# Stop sssd
+service sssd stop 
+
+# Clear the cache 
+rm -rf /var/lib/sss/db/* 
+
+# Restart sssd
+service sssd start
