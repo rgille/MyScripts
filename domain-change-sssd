@@ -7,6 +7,15 @@ wget http://kickstartprod/AD/sssd/sssd.PROGHSZQ -O /etc/sssd/sssd.conf
 # Stop sssd
 service sssd stop 
 
+# Uncomment and add this section to script if you wish to change/update the server banner
+#SED="/bin/sed -i -e "
+#USERDOM="PROGHSZ"
+#
+#grep "Banner /etc/issue.ssh" /etc/ssh/sshd_config > /dev/null 2>&1
+#    if [[ $? -ne 0 ]]; then
+#      ${SED} '/#Banner \/etc\/motd/a Banner \/etc\/issue.ssh' /etc/ssh/sshd_config
+#    fi
+
 # Clear the cache 
 rm -rf /var/lib/sss/db/* 
 
